@@ -5,10 +5,12 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Serato.Net.Util;
 
 namespace Serato.Net.Services
 {
@@ -18,6 +20,10 @@ namespace Serato.Net.Services
         private FileStream stream = null;
         private BinaryReader reader = null;
         private List<AdatStruct> AdatList = null;
+
+        private readonly IEnumerable<FieldPropertiesAttribute> _attributes =
+            (IEnumerable<FieldPropertiesAttribute>)typeof(TrackInfo).GetCustomAttributes(
+                typeof(FieldPropertiesAttribute), false);
         public SessionFileParser()
         {
             FileWatcher.Instance.SessionFileChanged += ParseSessionFile;
@@ -33,7 +39,7 @@ namespace Serato.Net.Services
                 reader = new BinaryReader(stream);
                 ParseFile();
                 reader.Close();
-                stream.Close();                               
+                stream.Close();
                 var list = ProcessTrackInfo().ToList();
             }
             catch (IOException exception)
@@ -105,16 +111,38 @@ namespace Serato.Net.Services
                     var id = BinaryPrimitives.ReadInt32BigEndian(r.ReadBytes(4));
                     var length = BinaryPrimitives.ReadInt32BigEndian(r.ReadBytes(4));
                     var data = r.ReadBytes(length);
-                    ParseField(id, data);
+                    ParseField(id, data, ref ti);
                 }
 
                 yield return ti;
             }
         }
 
-        private void ParseField(int id, byte[] data)
+        private void ParseField(int id, byte[] data, ref TrackInfo ti)
         {
-            Console.WriteLine($"Field ID: {id} Data: {Encoding.UTF8.GetString(data)}");
+            var prop = typeof(TrackInfo).GetFields()
+                .FirstOrDefault(p => (p.CustomAttributes?.Any(c =>
+                        c.AttributeType == typeof(FieldPropertiesAttribute) &&
+                        (int) c.ConstructorArguments[0].Value == id))
+                    .GetValueOrDefault());
+            if (prop == null) return;
+            var t = prop.FieldType;
+            if (t == typeof(int))
+            {
+                if (data.Length == 1)
+                {
+                    prop.SetValueDirect(__makeref(ti), (int)data[0]);
+                }
+                else
+                {
+                    prop.SetValueDirect(__makeref(ti), BinaryPrimitives.ReadInt32BigEndian(data));
+                }
+            }
+            else if (t == typeof(string))
+            {
+                prop.SetValueDirect(__makeref(ti), Encoding.BigEndianUnicode.GetString(data));
+            }
+
         }
 
         public void Dispose()
