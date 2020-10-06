@@ -42,7 +42,7 @@ namespace Serato.Net.Structs
         public string Frequency;
         
         [FieldProperties(15)]
-        public string BeatsPerMinute;
+        public int BeatsPerMinute;
         
         [FieldProperties(16)]
         public string Unknown16;
@@ -100,5 +100,10 @@ namespace Serato.Net.Structs
         
         [FieldProperties(53)]
         public DateTime UpdatedAt;
+
+        public override string ToString()
+        {
+            return $"{Artist} - {Title}";
+        }
     }
 }

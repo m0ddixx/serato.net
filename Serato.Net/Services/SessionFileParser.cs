@@ -11,12 +11,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Serato.Net.Util;
+using Microsoft.Extensions.Logging;
 
 namespace Serato.Net.Services
 {
     public sealed class SessionFileParser : IDisposable, IAsyncDisposable
     {
-        private static Mutex mut = new Mutex();
+        public event FinishedParsingTracksEventHandler FinishedParsingTracks;
+        private static Mutex mut;
         private FileStream stream = null;
         private BinaryReader reader = null;
         private List<AdatStruct> AdatList = null;
@@ -24,10 +26,25 @@ namespace Serato.Net.Services
         private readonly IEnumerable<FieldPropertiesAttribute> _attributes =
             (IEnumerable<FieldPropertiesAttribute>)typeof(TrackInfo).GetCustomAttributes(
                 typeof(FieldPropertiesAttribute), false);
-        public SessionFileParser()
+
+        private readonly ILogger _logger = null;
+        public SessionFileParser(bool bindEvents = true)
         {
-            FileWatcher.Instance.SessionFileChanged += ParseSessionFile;
+            Initialize(FileWatcher.Instance, bindEvents);
+        }
+
+        public SessionFileParser(ILogger logger, FileWatcher fileWatcher, bool bindEvents = true)
+        {
+            _logger = logger;
+            Initialize(fileWatcher, bindEvents);
+        }
+
+        private void Initialize(FileWatcher fileWatcher, bool bindEvents = true)
+        {
+            if (bindEvents)
+                fileWatcher.SessionFileChanged += ParseSessionFile;
             AdatList = new List<AdatStruct>();
+            mut = new Mutex();
         }
 
         private void ParseSessionFile(object sender, FileSystemEventArgs e)
@@ -38,19 +55,19 @@ namespace Serato.Net.Services
                 stream = File.OpenRead(e.FullPath);
                 reader = new BinaryReader(stream);
                 ParseFile();
-                reader.Close();
-                stream.Close();
-                var list = ProcessTrackInfo().ToList();
+                var tracks = ProcessTrackInfo();
+                OnFinishedParsingTracks(new FinishedParsingTracksEventArgs(tracks));
             }
             catch (IOException exception)
             {
+                _logger.Log(LogLevel.Error, exception.ToString());
                 Console.WriteLine(exception);
             }
             finally
             {
                 AdatList.Clear();
-                reader.Close();
-                stream.Close();
+                reader?.Close();
+                stream?.Close();
                 mut.ReleaseMutex();
             }
         }
@@ -113,7 +130,8 @@ namespace Serato.Net.Services
                     var data = r.ReadBytes(length);
                     ParseField(id, data, ref ti);
                 }
-
+                _logger?.Log(LogLevel.Information, ti.ToString());
+                Console.WriteLine(ti);
                 yield return ti;
             }
         }
@@ -140,10 +158,17 @@ namespace Serato.Net.Services
             }
             else if (t == typeof(string))
             {
-                prop.SetValueDirect(__makeref(ti), Encoding.BigEndianUnicode.GetString(data));
+                prop.SetValueDirect(__makeref(ti), Encoding.BigEndianUnicode.GetString(data).Replace("\0", string.Empty));
             }
 
         }
+
+        private void OnFinishedParsingTracks(FinishedParsingTracksEventArgs e)
+        {
+            FinishedParsingTracks?.Invoke(this, e);
+        }
+
+        public delegate void FinishedParsingTracksEventHandler(object sender, FinishedParsingTracksEventArgs e);
 
         public void Dispose()
         {

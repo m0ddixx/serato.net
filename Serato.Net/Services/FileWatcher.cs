@@ -9,7 +9,7 @@ namespace Serato.Net.Services
         public static FileWatcher Instance => Lazy.Value;
         public event FileSystemEventHandler SessionFileChanged;
 
-        private FileWatcher()
+        public FileWatcher()
         {
             var fw = new FileSystemWatcher()
             {
