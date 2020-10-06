@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30413.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serato.Net", "Serato.Net\Serato.Net.csproj", "{05E92C46-E802-4B04-8FA4-01A1DE3168E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serato.Net.Test", "Serato.Net.Test\Serato.Net.Test.csproj", "{7922412D-8601-46B3-840E-E5C1FCB4E786}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{05E92C46-E802-4B04-8FA4-01A1DE3168E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05E92C46-E802-4B04-8FA4-01A1DE3168E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05E92C46-E802-4B04-8FA4-01A1DE3168E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05E92C46-E802-4B04-8FA4-01A1DE3168E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7922412D-8601-46B3-840E-E5C1FCB4E786}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7922412D-8601-46B3-840E-E5C1FCB4E786}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7922412D-8601-46B3-840E-E5C1FCB4E786}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7922412D-8601-46B3-840E-E5C1FCB4E786}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DFB70DC0-3074-4F0A-A789-B01A925F2330}
+	EndGlobalSection
+EndGlobal
