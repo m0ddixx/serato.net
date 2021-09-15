@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Serato.Net": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}

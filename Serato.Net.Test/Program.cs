@@ -12,19 +12,21 @@ namespace Serato.Net.Test
     {
         static async Task Main(string[] args)
         {
-            var builder = new HostBuilder()
+            var builder = Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
                     config.AddCommandLine(args);
                 })
+                .ConfigureLogging(logging =>
+                {
+                    logging.SetMinimumLevel(LogLevel.Debug);
+                    logging.AddConsole();
+                })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddSingleton(new FileWatcher());
-                    services.AddSingleton(new SessionFileParser(true));
-                })
-                .ConfigureLogging((hostingContext, logging) =>
-                {
-                    logging.AddConsole();
+                    services.AddSingleton(s => new FileWatcher(s.GetRequiredService<ILogger<FileWatcher>>()));
+                    services.AddSingleton(s => new SessionFileParser(s.GetRequiredService<ILogger<SessionFileParser>>(), s.GetRequiredService<FileWatcher>()));
+                    services.AddHostedService<SeratoTestService>();
                 });
             await builder.RunConsoleAsync();
         }
@@ -33,5 +35,5 @@ namespace Serato.Net.Test
         {
 
         }
-    }
+    }    
 }

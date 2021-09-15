@@ -1,0 +1,49 @@
+@startuml entitymodel
+class Host {
+    +Id: Guid
+    +Name: string
+    +Decks: ICollection<Deck>
+    +Sessions: ICollection<Session>
+}
+
+class Deck {
+    +DeckId: int
+    +Host: Host
+}
+
+class Session {
+    +Id: Guid
+    +Host: Host
+    +SessionId: int
+    +Tracks: ICollection<Track>
+}
+
+
+enum TrackStatus {
+    New
+    Played
+    Playing
+    Skipped
+}
+
+class Track {
+    +Id: Guid
+    +Deck: Deck
+    +Session: Session
+    +Title: string
+    +Artist: string
+    +Album: string
+    +Key: string
+    +BeatsPerMinute: int
+    +StartedAt: DateTimeOffset
+    +StoppedAt: DateTimeOffset
+    +UpdatedAt: DateTimeOffset
+    +TrackStatus: TrackStatus
+}
+
+Track -- TrackStatus
+Host o-- Deck
+Session o-- Track
+Host o-- Session
+Deck -- Track
+@enduml

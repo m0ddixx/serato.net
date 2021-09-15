@@ -1,11 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30413.136
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31710.8
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serato.Net", "Serato.Net\Serato.Net.csproj", "{05E92C46-E802-4B04-8FA4-01A1DE3168E5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Serato.Net", "Serato.Net\Serato.Net.csproj", "{05E92C46-E802-4B04-8FA4-01A1DE3168E5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serato.Net.Test", "Serato.Net.Test\Serato.Net.Test.csproj", "{7922412D-8601-46B3-840E-E5C1FCB4E786}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Serato.Net.Test", "Serato.Net.Test\Serato.Net.Test.csproj", "{7922412D-8601-46B3-840E-E5C1FCB4E786}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serato.Net.Tray", "Serato.Net.Tray\Serato.Net.Tray.csproj", "{24273537-0AFB-47E6-8C59-D8CB95DC0E19}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serato.Net.Api", "Serato.Net.Api\Serato.Net.Api.csproj", "{D01DA5B9-3388-44E5-B4D3-97D92EC6A78A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serato.Net.Api.Shared", "Serato.Net.Api.Shared\Serato.Net.Api.Shared.csproj", "{F4E946F6-D301-4C7D-94FF-4FCFF58759F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +27,18 @@ Global
 		{7922412D-8601-46B3-840E-E5C1FCB4E786}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7922412D-8601-46B3-840E-E5C1FCB4E786}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7922412D-8601-46B3-840E-E5C1FCB4E786}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24273537-0AFB-47E6-8C59-D8CB95DC0E19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24273537-0AFB-47E6-8C59-D8CB95DC0E19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24273537-0AFB-47E6-8C59-D8CB95DC0E19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24273537-0AFB-47E6-8C59-D8CB95DC0E19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D01DA5B9-3388-44E5-B4D3-97D92EC6A78A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D01DA5B9-3388-44E5-B4D3-97D92EC6A78A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D01DA5B9-3388-44E5-B4D3-97D92EC6A78A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D01DA5B9-3388-44E5-B4D3-97D92EC6A78A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4E946F6-D301-4C7D-94FF-4FCFF58759F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4E946F6-D301-4C7D-94FF-4FCFF58759F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4E946F6-D301-4C7D-94FF-4FCFF58759F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4E946F6-D301-4C7D-94FF-4FCFF58759F5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

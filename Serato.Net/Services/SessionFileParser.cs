@@ -17,46 +17,47 @@ namespace Serato.Net.Services
 {
     public sealed class SessionFileParser : IDisposable, IAsyncDisposable
     {
-        public event FinishedParsingTracksEventHandler FinishedParsingTracks;
-        private static Mutex mut;
-        private FileStream stream = null;
-        private BinaryReader reader = null;
-        private List<AdatStruct> AdatList = null;
+        public event FinishedParsingTracksEventHandler? FinishedParsingTracks;
+        private readonly Mutex _mut;
+        private FileStream? _stream;
+        private BinaryReader? _reader;
+        private readonly List<AdatStruct> _adatList;
 
         private readonly IEnumerable<FieldPropertiesAttribute> _attributes =
             (IEnumerable<FieldPropertiesAttribute>)typeof(TrackInfo).GetCustomAttributes(
                 typeof(FieldPropertiesAttribute), false);
 
-        private readonly ILogger _logger = null;
-        public SessionFileParser(bool bindEvents = true)
-        {
-            Initialize(FileWatcher.Instance, bindEvents);
-        }
+        private readonly ILogger<SessionFileParser> _logger;
 
-        public SessionFileParser(ILogger logger, FileWatcher fileWatcher, bool bindEvents = true)
+        public SessionFileParser(ILogger<SessionFileParser> logger, FileWatcher fileWatcher) : this(logger, fileWatcher, true)
+        {
+
+        }
+        public SessionFileParser(ILogger<SessionFileParser> logger, FileWatcher fileWatcher, bool bindEvents = true)
         {
             _logger = logger;
+            _mut = new Mutex();
+            _adatList = new List<AdatStruct>();
             Initialize(fileWatcher, bindEvents);
         }
 
         private void Initialize(FileWatcher fileWatcher, bool bindEvents = true)
         {
             if (bindEvents)
-                fileWatcher.SessionFileChanged += ParseSessionFile;
-            AdatList = new List<AdatStruct>();
-            mut = new Mutex();
+                fileWatcher.SessionFileChanged += async (sender, e) => await ParseSessionFile(sender, e);
         }
 
-        private void ParseSessionFile(object sender, FileSystemEventArgs e)
+        private async Task ParseSessionFile(object sender, FileSystemEventArgs e)
         {
-            mut.WaitOne();
+            _mut.WaitOne();
             try
             {
-                stream = File.OpenRead(e.FullPath);
-                reader = new BinaryReader(stream);
-                ParseFile();
+                _stream = File.OpenRead(e.FullPath);
+                _stream.Position = 0;
+                _reader = new BinaryReader(_stream);
+                await ParseFile();
                 var tracks = ProcessTrackInfo();
-                OnFinishedParsingTracks(new FinishedParsingTracksEventArgs(tracks));
+                await OnFinishedParsingTracks(new FinishedParsingTracksEventArgs(tracks, e.Name));
             }
             catch (IOException exception)
             {
@@ -65,41 +66,45 @@ namespace Serato.Net.Services
             }
             finally
             {
-                AdatList.Clear();
-                reader?.Close();
-                stream?.Close();
-                mut.ReleaseMutex();
+                _adatList?.Clear();
+                _reader?.Close();
+                _stream?.Close();
+                _mut.ReleaseMutex();
             }
         }
 
-        private void ParseFile()
+        private async Task ParseFile()
         {
-            while (reader.BaseStream.Length - reader.BaseStream.Position >= 8)
+            if (_reader == null)
+                throw new InvalidOperationException($"{nameof(_reader)} is null");
+            while (_reader.BaseStream.Length - _reader.BaseStream.Position >= 8)
             {
-                ParseHeaderWithChunk();
+                await ParseHeaderWithChunk();
             }
         }
 
-        private void ParseHeaderWithChunk()
+        private async Task ParseHeaderWithChunk()
         {
+            if (_reader == null)
+                throw new InvalidOperationException($"{nameof(_reader)} is null");
             var header = new ChunkHeader()
             {
-                Identifier = Encoding.UTF8.GetString(reader.ReadBytes(4)),
-                Length = BinaryPrimitives.ReadInt32BigEndian(reader.ReadBytes(4))
+                Identifier = Encoding.UTF8.GetString(_reader.ReadBytes(4)),
+                Length = BinaryPrimitives.ReadInt32BigEndian(_reader.ReadBytes(4))
             };
-            ParseChunk(header);
+            await ParseChunk(header);
         }
 
-        private void ParseChunk(ChunkHeader header)
+        private async Task ParseChunk(ChunkHeader header)
         {
-            Action parserTask = header.Identifier switch
+            Task parserTask = header.Identifier switch
             {
-                "vrsn" => () => ParseVrsnChunk(header.Length),
-                "oent" => ParseHeaderWithChunk,
-                "adat" => () => ParseAdatChunk(header.Length),
-                _ => null,
+                "vrsn" => ParseVrsnChunk(header.Length),
+                "oent" => ParseHeaderWithChunk(),
+                "adat" => ParseAdatChunk(header.Length),
+                _ => Task.CompletedTask,
             };
-            parserTask?.Invoke();
+            await parserTask;
         }
 
         public Task ParseVrsnChunk(int length)
@@ -109,79 +114,91 @@ namespace Serato.Net.Services
 
         public Task ParseAdatChunk(int length)
         {
-            AdatList.Add(new AdatStruct()
+            if (_reader == null)
+                throw new InvalidOperationException($"{nameof(_reader)} is null");
+            _adatList?.Add(new AdatStruct()
             {
-                Data = reader.ReadBytes(length)
+                Data = _reader.ReadBytes(length)
             });
             return Task.CompletedTask;
         }
 
-        public IEnumerable<TrackInfo> ProcessTrackInfo()
+        public async IAsyncEnumerable<TrackInfo> ProcessTrackInfo()
         {
-            foreach (var adat in AdatList)
+            foreach (var adat in _adatList)
             {
                 var ti = new TrackInfo();
-                using var mem = new MemoryStream(adat.Data);
+                await using var mem = new MemoryStream(adat.Data);
                 using var r = new BinaryReader(mem);
                 while (r.PeekChar() > -1)
                 {
                     var id = BinaryPrimitives.ReadInt32BigEndian(r.ReadBytes(4));
                     var length = BinaryPrimitives.ReadInt32BigEndian(r.ReadBytes(4));
                     var data = r.ReadBytes(length);
-                    ParseField(id, data, ref ti);
+                    await ParseField(id, data, ref ti);
                 }
-                _logger?.Log(LogLevel.Information, ti.ToString());
-                Console.WriteLine(ti);
+                _logger.Log(LogLevel.Information, ti.ToString());
                 yield return ti;
             }
         }
 
-        private void ParseField(int id, byte[] data, ref TrackInfo ti)
+        private Task ParseField(int id, byte[] data, ref TrackInfo ti)
         {
-            var prop = typeof(TrackInfo).GetFields()
+            var prop = typeof(TrackInfo).GetProperties()
                 .FirstOrDefault(p => (p.CustomAttributes?.Any(c =>
                         c.AttributeType == typeof(FieldPropertiesAttribute) &&
-                        (int) c.ConstructorArguments[0].Value == id))
+                        (c.ConstructorArguments[0].Value is int argId && argId == id)))
                     .GetValueOrDefault());
-            if (prop == null) return;
-            var t = prop.FieldType;
+            if (prop == null) return Task.CompletedTask;
+            var t = prop.PropertyType;
             if (t == typeof(int))
             {
                 if (data.Length == 1)
                 {
-                    prop.SetValueDirect(__makeref(ti), (int)data[0]);
+                    prop.SetValue(ti, (int)data[0]);
                 }
                 else
                 {
-                    prop.SetValueDirect(__makeref(ti), BinaryPrimitives.ReadInt32BigEndian(data));
+                    prop.SetValue(ti, BinaryPrimitives.ReadInt32BigEndian(data));
                 }
             }
             else if (t == typeof(string))
             {
-                prop.SetValueDirect(__makeref(ti), Encoding.BigEndianUnicode.GetString(data).Replace("\0", string.Empty));
+                prop.SetValue(ti, Encoding.BigEndianUnicode.GetString(data).Replace("\0", string.Empty));
+            }
+            else if (t == typeof(DateTimeOffset))
+            {
+                prop.SetValue(ti, DateTimeOffset.FromUnixTimeSeconds(BinaryPrimitives.ReadInt64BigEndian(data)));
+            }
+            else if (t == typeof(TimeSpan))
+            {
+                prop.SetValue(ti, TimeSpan.FromSeconds(BinaryPrimitives.ReadInt64BigEndian(data)));
             }
 
+            return Task.CompletedTask;
         }
 
-        private void OnFinishedParsingTracks(FinishedParsingTracksEventArgs e)
+        private async Task OnFinishedParsingTracks(FinishedParsingTracksEventArgs e)
         {
-            FinishedParsingTracks?.Invoke(this, e);
+            if(FinishedParsingTracks != null)
+                await FinishedParsingTracks(this, e);
         }
 
-        public delegate void FinishedParsingTracksEventHandler(object sender, FinishedParsingTracksEventArgs e);
+        public delegate Task FinishedParsingTracksEventHandler(object sender, FinishedParsingTracksEventArgs e);
 
         public void Dispose()
         {
-            mut.Dispose();
-            stream?.Dispose();
-            reader?.Dispose();
+            _mut.Dispose();
+            _stream?.Dispose();
+            _reader?.Dispose();
         }
 
         public async ValueTask DisposeAsync()
         {
-            await stream.DisposeAsync();
-            mut.Dispose();
-            reader.Dispose();
+            if (_stream != null)
+                await _stream.DisposeAsync();
+            _mut.Dispose();
+            _reader?.Dispose();
         }
     }
 }
